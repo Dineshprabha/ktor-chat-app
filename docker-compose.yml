@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres
+    container_name: postgres_chat_app
+    restart: always
+    environment:
+      POSTGRES_DB: ktor_chat_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer
+    container_name: adminer_chat_app
+    restart: always
+    ports:
+      - "8081:8080"
+
+volumes:
+  postgres_data:

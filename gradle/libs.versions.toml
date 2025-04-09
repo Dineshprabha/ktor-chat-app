@@ -3,6 +3,9 @@
 kotlin-version = "2.1.20"
 ktor-version = "3.1.2"
 logback-version = "1.4.14"
+postgres-version = "42.7.5"
+exposed-version = "0.60.0"
+hikaricp-version = "5.0.1"
 
 [libraries]
 ktor-server-core = { module = "io.ktor:ktor-server-core", version.ref = "ktor-version" }
@@ -19,6 +22,11 @@ ktor-server-request-validation = { module = "io.ktor:ktor-server-request-validat
 ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor-version"}
 ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor-version"}
 ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor-version"}
+hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp-version"}
+
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgres-version" }
+exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed-version" }
+exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed-version" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin-version" }

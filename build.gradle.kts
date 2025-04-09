@@ -35,5 +35,14 @@ dependencies {
     implementation(libs.ktor.server.auth)
     implementation(libs.ktor.server.auth.jwt)
 
+    implementation(libs.postgresql)
+    implementation(libs.hikaricp)
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.jdbc)
+
     implementation(libs.ktor.server.websockets)
+    implementation("at.favre.lib:bcrypt:0.9.0")
+
+
+    implementation("ch.qos.logback:logback-classic:1.4.11")
 }
