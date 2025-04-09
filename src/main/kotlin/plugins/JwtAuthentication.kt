@@ -2,7 +2,7 @@ package com.dinesh.plugins
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import com.dinesh.models.JWTConfig
+import com.dinesh.auth.model.JWTConfig
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*

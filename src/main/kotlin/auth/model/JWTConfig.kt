@@ -1,4 +1,4 @@
-package com.dinesh.models
+package com.dinesh.auth.model
 
 data class JWTConfig(
     val realm: String,

@@ -1,7 +1,7 @@
 package com.dinesh
 
 import com.dinesh.db.DatabaseFactory
-import com.dinesh.models.JWTConfig
+import com.dinesh.auth.model.JWTConfig
 import com.dinesh.plugins.configureJWTAuthentication
 import com.dinesh.plugins.configureRouting
 import io.ktor.server.application.*
