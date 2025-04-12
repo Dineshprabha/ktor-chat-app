@@ -1,6 +1,7 @@
 package com.dinesh.plugins
 
 import com.dinesh.auth.model.*
+import com.dinesh.chat.model.Message
 import com.dinesh.db.Users
 import com.dinesh.models.UserDTO
 import com.dinesh.utils.PasswordHasher
@@ -11,14 +12,22 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import io.ktor.server.websocket.*
+import io.ktor.websocket.*
+import kotlinx.coroutines.channels.consumeEach
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 fun Application.configureRouting(config: JWTConfig) {
 
+    val onlineUsers = ConcurrentHashMap<String, WebSocketSession>()
+    val logger = LoggerFactory.getLogger("ktor.chat")
 
     routing {
 
@@ -73,6 +82,55 @@ fun Application.configureRouting(config: JWTConfig) {
                     call.respond(user)
                 }
             }
+
+
+            webSocket("/chat") {
+                val principal = call.principal<JWTPrincipal>()
+                val email = principal?.payload?.getClaim("username")?.asString()
+                logger.info("Email: $email")
+
+                if (email == null) {
+                    close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
+                    return@webSocket
+                }
+
+                onlineUsers[email] = this
+                logger.info("Online Users: $onlineUsers")
+                send("🔒 Connected as $email")
+
+                try {
+                    incoming.consumeEach { frame ->
+                        if (frame is Frame.Text) {
+                            val incomingMessage = Json.decodeFromString<Message>(frame.readText())
+
+                            val messageToSend = incomingMessage.copy(
+                                from = email,
+                                timestamp = System.currentTimeMillis()
+                            )
+
+                            val messageJson = Json.encodeToString(Message.serializer(), messageToSend)
+
+                            if (incomingMessage.to.isNullOrBlank()) {
+                                // Broadcast to everyone
+                                onlineUsers.values.forEach { socket ->
+                                    socket.send(messageJson)
+                                }
+                            } else {
+                                // Send to specific user
+                                val receiver = onlineUsers[incomingMessage.to]
+                                receiver?.send(messageJson)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    logger.error("WebSocket Error: ${e.message}")
+                } finally {
+                    onlineUsers.remove(email)
+                    close()
+                }
+            }
+
+
 
         }
 
@@ -153,3 +211,5 @@ fun Application.configureRouting(config: JWTConfig) {
         }
     }
 }
+
+

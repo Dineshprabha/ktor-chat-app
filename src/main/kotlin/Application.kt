@@ -4,6 +4,7 @@ import com.dinesh.db.DatabaseFactory
 import com.dinesh.auth.model.JWTConfig
 import com.dinesh.plugins.configureJWTAuthentication
 import com.dinesh.plugins.configureRouting
+import com.dinesh.plugins.configureWebsockets
 import io.ktor.server.application.*
 
 fun main(args: Array<String>) {
@@ -29,6 +30,7 @@ fun Application.module() {
     )
 
     DatabaseFactory.init()
+    configureWebsockets()
     configureJWTAuthentication(config)
     configureRouting(config)
     configureSerialization()
