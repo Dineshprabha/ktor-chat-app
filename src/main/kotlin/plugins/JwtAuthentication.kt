@@ -40,11 +40,12 @@ fun Application.configureJWTAuthentication(config: JWTConfig) {
     }
 }
 
-fun generateToken(config: JWTConfig, username: String) : String {
+fun generateToken(config: JWTConfig, userId: String, email: String): String {
     return JWT.create()
         .withAudience(config.audience)
         .withIssuer(config.issuer)
-        .withClaim("username", username)
+        .withClaim("user_id", userId)      // 🔐 UUID from PostgreSQL
+        .withClaim("username", email)      // 📧 Optional email
         .withExpiresAt(Date(System.currentTimeMillis() + config.tokenExpiry))
         .sign(Algorithm.HMAC256(config.secret))
 }

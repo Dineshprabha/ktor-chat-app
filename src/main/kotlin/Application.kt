@@ -2,6 +2,7 @@ package com.dinesh
 
 import com.dinesh.db.DatabaseFactory
 import com.dinesh.auth.model.JWTConfig
+import com.dinesh.chat.services.MongoMessageService
 import com.dinesh.plugins.configureJWTAuthentication
 import com.dinesh.plugins.configureRouting
 import com.dinesh.plugins.configureWebsockets
@@ -12,6 +13,8 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
+
+    val mongoMessageService = MongoMessageService()
 
     val jwt = environment.config.config("ktor.jwt")
     val secret = jwt.property("secret").getString()
@@ -32,7 +35,7 @@ fun Application.module() {
     DatabaseFactory.init()
     configureWebsockets()
     configureJWTAuthentication(config)
-    configureRouting(config)
+    configureRouting(config, mongoMessageService)
     configureSerialization()
 
 

@@ -19,7 +19,7 @@ services:
     container_name: adminer_chat_app
     restart: always
     ports:
-      - "8081:8080"
+      - "8082:8080"
 
 volumes:
   postgres_data:

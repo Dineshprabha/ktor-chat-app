@@ -2,6 +2,7 @@ package com.dinesh.plugins
 
 import com.dinesh.auth.model.*
 import com.dinesh.chat.model.Message
+import com.dinesh.chat.services.MongoMessageService
 import com.dinesh.db.Users
 import com.dinesh.models.UserDTO
 import com.dinesh.utils.PasswordHasher
@@ -24,15 +25,15 @@ import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-fun Application.configureRouting(config: JWTConfig) {
+fun Application.configureRouting(config: JWTConfig, mongoMessageService: MongoMessageService ) {
 
-    val onlineUsers = ConcurrentHashMap<String, WebSocketSession>()
+    val activeSessions = ConcurrentHashMap<String, WebSocketSession>()
     val logger = LoggerFactory.getLogger("ktor.chat")
 
     routing {
 
         authenticate ("jwt-auth") {
-            get("/profile") {
+            get("api/v1/profile") {
                 val principal = call.principal<JWTPrincipal>()
                 val username = principal?.payload?.getClaim("username")?.asString()
                 val expiresAt = principal?.expiresAt?.time?.minus(System.currentTimeMillis())
@@ -40,7 +41,7 @@ fun Application.configureRouting(config: JWTConfig) {
             }
 
             // 🔒 Secure /users endpoint
-            get("/users") {
+            get("api/v1/users") {
                 val users = transaction {
                     Users.selectAll().map {
                         UserDTO(
@@ -53,7 +54,7 @@ fun Application.configureRouting(config: JWTConfig) {
                 call.respond(users)
             }
 
-            get("/user/{id}") {
+            get("api/v1/user/{id}") {
                 val userId = call.parameters["id"]?.let { UUID.fromString(it) }
 
                 if (userId == null) {
@@ -84,57 +85,83 @@ fun Application.configureRouting(config: JWTConfig) {
             }
 
 
+            get("api/v1/messages/{receiverId}") {
+                val principal = call.principal<JWTPrincipal>()
+                val senderId = principal?.payload?.getClaim("user_id")?.asString()
+
+                val receiverId = call.parameters["receiverId"]
+
+                if (senderId == null || receiverId == null) {
+                    call.respond(HttpStatusCode.BadRequest, "Missing userId or unauthorized.")
+                    return@get
+                }
+
+                val messages = mongoMessageService.getMessagesBetween(senderId, receiverId)
+                call.respond(HttpStatusCode.OK, messages)
+            }
+
+
+
             webSocket("/chat") {
                 val principal = call.principal<JWTPrincipal>()
-                val email = principal?.payload?.getClaim("username")?.asString()
-                logger.info("Email: $email")
+                val senderId = principal?.payload?.getClaim("user_id")?.asString()
+                val senderEmail = principal?.payload?.getClaim("username")?.asString()
 
-                if (email == null) {
+                if (senderId == null || senderEmail == null) {
                     close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
                     return@webSocket
                 }
 
-                onlineUsers[email] = this
-                logger.info("Online Users: $onlineUsers")
-                send("🔒 Connected as $email")
+                // Register the sender session
+                activeSessions[senderId] = this
+
+                send("✅ Connected as $senderEmail")
 
                 try {
                     incoming.consumeEach { frame ->
                         if (frame is Frame.Text) {
-                            val incomingMessage = Json.decodeFromString<Message>(frame.readText())
+                            try {
+                                val incomingMessage = Json.decodeFromString<Message>(frame.readText())
 
-                            val messageToSend = incomingMessage.copy(
-                                from = email,
-                                timestamp = System.currentTimeMillis()
-                            )
+                                // Don't trust 'from' in the message body; override it with the authenticated user
+                                val messageToStore = incomingMessage.copy(
+                                    from = senderId,
+                                    timestamp = System.currentTimeMillis()
+                                )
 
-                            val messageJson = Json.encodeToString(Message.serializer(), messageToSend)
+                                // Save message to MongoDB
+                                mongoMessageService.insertOneUser(messageToStore)
 
-                            if (incomingMessage.to.isNullOrBlank()) {
-                                // Broadcast to everyone
-                                onlineUsers.values.forEach { socket ->
-                                    socket.send(messageJson)
+                                // Deliver message to receiver if online
+                                val receiverSession = activeSessions[incomingMessage.to]
+                                if (receiverSession != null) {
+                                    val messageJson = Json.encodeToString(Message.serializer(), messageToStore)
+                                    receiverSession.send(messageJson)
                                 }
-                            } else {
-                                // Send to specific user
-                                val receiver = onlineUsers[incomingMessage.to]
-                                receiver?.send(messageJson)
+
+                                // Confirm to sender
+                                send("📨 Message delivered to userId: ${incomingMessage.to}")
+                            } catch (e: Exception) {
+                                logger.error("Error processing message: ${e.message}")
+                                send("❌ Error: Invalid message format or content.")
                             }
                         }
                     }
                 } catch (e: Exception) {
-                    logger.error("WebSocket Error: ${e.message}")
+                    logger.error("WebSocket Error: ${e.localizedMessage}")
                 } finally {
-                    onlineUsers.remove(email)
-                    close()
+                    // Remove the session when disconnected
+                    activeSessions.remove(senderId)
+                    close(CloseReason(CloseReason.Codes.NORMAL, "Disconnected"))
                 }
             }
 
 
 
+
         }
 
-        post("signup") {
+        post("api/v1/auth/signup") {
             val request = call.receive<AuthRequest>()
             val existingUser = transaction {
                 Users.selectAll().find { it[Users.email] == request.email }
@@ -163,7 +190,7 @@ fun Application.configureRouting(config: JWTConfig) {
             }
         }
 
-        post("login") {
+        post("api/v1/auth/login") {
             val request = call.receive<LoginRequest>()
 
             val user = transaction {
@@ -180,7 +207,6 @@ fun Application.configureRouting(config: JWTConfig) {
                 if (!isPasswordValid) {
                     call.respond(HttpStatusCode.Unauthorized, "Invalid credentials")
                 } else {
-                    val token = generateToken(config, request.email)
 
                     // Create DTO without exposing password
                     val userDTO = UserDTO(
@@ -191,6 +217,8 @@ fun Application.configureRouting(config: JWTConfig) {
                         isOnline =  user[Users.isOnline],
                         lastSeen = user[Users.lastSeen]
                     )
+
+                    val token = generateToken(config, userDTO.id.toString(), userDTO.email)
 
                     val authResponse = AuthResponse(
                         token = token,

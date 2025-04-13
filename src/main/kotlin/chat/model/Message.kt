@@ -1,9 +1,12 @@
 package com.dinesh.chat.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.bson.types.ObjectId
 
 @Serializable
 data class Message(
+    @SerialName("_id") val id: String = ObjectId().toString(),
     val to: String? = null,
     val from: String? = null,
     val text: String? = null,
