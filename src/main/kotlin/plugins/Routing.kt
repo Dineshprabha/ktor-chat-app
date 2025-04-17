@@ -3,7 +3,7 @@ package com.dinesh.plugins
 import com.dinesh.auth.model.*
 import com.dinesh.chat.model.Message
 import com.dinesh.chat.services.MongoMessageService
-import com.dinesh.db.Users
+import com.dinesh.db.User
 import com.dinesh.models.UserDTO
 import com.dinesh.utils.PasswordHasher
 import io.ktor.http.*
@@ -16,11 +16,12 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.channels.consumeEach
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -43,11 +44,13 @@ fun Application.configureRouting(config: JWTConfig, mongoMessageService: MongoMe
             // 🔒 Secure /users endpoint
             get("api/v1/users") {
                 val users = transaction {
-                    Users.selectAll().map {
+                    User.selectAll().map {
                         UserDTO(
-                            id = it[Users.id],
-                            name = it[Users.name],
-                            email = it[Users.email]
+                            id = it[User.id],
+                            name = it[User.name],
+                            email = it[User.email],
+                            imageUrl = it[User.imageUrl],
+                            isOnline = it[User.isOnline],
                         )
                     }
                 }
@@ -63,16 +66,15 @@ fun Application.configureRouting(config: JWTConfig, mongoMessageService: MongoMe
                 }
 
                 val user = transaction {
-                    Users.selectAll()
-                        .where { Users.id eq userId }
+                    User.selectAll()
+                        .where { User.id eq userId }
                         .map { row ->
                             UserDTO(
-                                id = row[Users.id],
-                                name = row[Users.name],
-                                email = row[Users.email],
-                                avatarUrl = row[Users.avatarUrl],
-                                isOnline = row[Users.isOnline],
-                                lastSeen = row[Users.lastSeen]
+                                id = row[User.id],
+                                name = row[User.name],
+                                email = row[User.email],
+                                imageUrl = row[User.imageUrl],
+                                isOnline = row[User.isOnline]
                             )
                         }.singleOrNull()
                 }
@@ -164,7 +166,7 @@ fun Application.configureRouting(config: JWTConfig, mongoMessageService: MongoMe
         post("api/v1/auth/signup") {
             val request = call.receive<AuthRequest>()
             val existingUser = transaction {
-                Users.selectAll().find { it[Users.email] == request.email }
+                User.selectAll().find { it[User.email] == request.email }
             }
 
             if (existingUser != null) {
@@ -173,7 +175,7 @@ fun Application.configureRouting(config: JWTConfig, mongoMessageService: MongoMe
                 val hashedPassword = PasswordHasher.hash(request.password!!)
 
                 transaction {
-                    Users.insert {
+                    User.insert {
                         it[name] = request.name
                         it[email] = request.email
                         it[password] = hashedPassword
@@ -194,34 +196,56 @@ fun Application.configureRouting(config: JWTConfig, mongoMessageService: MongoMe
             val request = call.receive<LoginRequest>()
 
             val user = transaction {
-                Users.selectAll()
-                    .find { it[Users.email] == request.email }
+                User.selectAll()
+                    .find { it[User.email] == request.email }
             }
 
             if (user == null) {
                 call.respond(HttpStatusCode.NotFound, "User not found")
             } else {
-                val hashedPassword = user[Users.password]
+                val hashedPassword = user[User.password]
                 val isPasswordValid = PasswordHasher.verify(request.password, hashedPassword)
 
                 if (!isPasswordValid) {
                     call.respond(HttpStatusCode.Unauthorized, "Invalid credentials")
                 } else {
+                    val userId = user[User.id]
+                    val userEmail = user[User.email]
 
-                    // Create DTO without exposing password
+                    val currentTimeMillis = System.currentTimeMillis()
+                    val accessExpiryTime = currentTimeMillis + config.tokenExpiry
+                    val refreshExpiryTime = currentTimeMillis + config.refreshTokenExpiry
+
+                    // ✅ Generate tokens
+                    val token = generateToken(config, userId.toString(), userEmail)
+                    val refreshToken = generateRefreshToken(config, userId.toString(), userEmail)
+
+                    // ✅ Update tokens in DB
+                    transaction {
+                        User.update({ User.id eq userId }) {
+                            it[User.token] = token
+                            it[User.refresh_token] = refreshToken
+                            it[User.isOnline] = true
+                            it[User.lastLoginAt] = CurrentTimestamp
+                        }
+                    }
+
+                    // ✅ Build UserDTO without password
                     val userDTO = UserDTO(
-                        id = user[Users.id],
-                        name = user[Users.name],
-                        email = user[Users.email],
-                        avatarUrl = user[Users.avatarUrl],
-                        isOnline =  user[Users.isOnline],
-                        lastSeen = user[Users.lastSeen]
+                        id = user[User.id],
+                        name = user[User.name],
+                        email = user[User.email],
+                        username = user[User.username],
+                        imageUrl = user[User.imageUrl],
+                        bio = user[User.bio],
+                        isOnline = true
                     )
-
-                    val token = generateToken(config, userDTO.id.toString(), userDTO.email)
 
                     val authResponse = AuthResponse(
                         token = token,
+                        tokenExpiry = accessExpiryTime,
+                        refreshToken = refreshToken,
+                        refreshTokenExpiry = refreshExpiryTime,
                         user = userDTO
                     )
 
@@ -232,11 +256,10 @@ fun Application.configureRouting(config: JWTConfig, mongoMessageService: MongoMe
                             data = authResponse
                         )
                     )
-
                 }
             }
-
         }
+
     }
 }
 

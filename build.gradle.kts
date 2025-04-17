@@ -40,6 +40,9 @@ dependencies {
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)
 
+    implementation("org.jetbrains.exposed:exposed-java-time:0.60.0")
+    implementation("org.jetbrains.exposed:exposed-dao:0.60.0")
+
     implementation(libs.ktor.server.websockets)
     implementation("at.favre.lib:bcrypt:0.9.0")
 
@@ -47,7 +50,7 @@ dependencies {
     implementation(libs.bson.kotlinx)
 
 
-    implementation("ch.qos.logback:logback-classic:1.4.11")
+    implementation("ch.qos.logback:logback-classic:1.4.12")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
     implementation("org.litote.kmongo:kmongo-coroutine:4.9.0") // or latest version
 

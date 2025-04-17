@@ -44,8 +44,18 @@ fun generateToken(config: JWTConfig, userId: String, email: String): String {
     return JWT.create()
         .withAudience(config.audience)
         .withIssuer(config.issuer)
-        .withClaim("user_id", userId)      // 🔐 UUID from PostgreSQL
-        .withClaim("username", email)      // 📧 Optional email
+        .withClaim("user_id", userId)
+        .withClaim("username", email)
         .withExpiresAt(Date(System.currentTimeMillis() + config.tokenExpiry))
+        .sign(Algorithm.HMAC256(config.secret))
+}
+
+fun generateRefreshToken(config: JWTConfig, userId: String, email: String): String {
+    return JWT.create()
+        .withAudience(config.audience)
+        .withIssuer(config.issuer)
+        .withClaim("user_id", userId)
+        .withClaim("username", email)
+        .withExpiresAt(Date(System.currentTimeMillis() + config.refreshTokenExpiry))
         .sign(Algorithm.HMAC256(config.secret))
 }

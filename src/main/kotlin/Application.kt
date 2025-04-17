@@ -21,14 +21,16 @@ fun Application.module() {
     val issuer = jwt.property("issuer").getString()
     val audience = jwt.property("audience").getString()
     val realm = jwt.property("realm").getString()
-    val tokenExpiry = jwt.property("expiry").getString().toLong()
+    val tokenExpiry = jwt.property("tokenExpiry").getString().toLong()
+    val refreshTokenExpiry = jwt.property("refreshTokenExpiry").getString().toLong()
 
     val config = JWTConfig(
         realm = realm,
         audience = audience,
         issuer = issuer,
         tokenExpiry = tokenExpiry,
-        secret = secret
+        refreshTokenExpiry = refreshTokenExpiry,
+        secret = secret,
 
     )
 

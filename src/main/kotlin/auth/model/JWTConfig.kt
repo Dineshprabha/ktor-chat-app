@@ -5,5 +5,6 @@ data class JWTConfig(
     val secret: String,
     val issuer: String,
     val audience: String,
-    val tokenExpiry: Long
+    val tokenExpiry: Long = 86400000,
+    val refreshTokenExpiry: Long = 7 * 86400000
 )
