@@ -1,8 +1,7 @@
-package com.dinesh.models
+package com.dinesh.user.model
 
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
-import java.time.LocalDateTime
 import java.util.*
 
 @Serializable

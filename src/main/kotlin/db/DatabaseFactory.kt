@@ -1,5 +1,6 @@
 package com.dinesh.db
 
+import com.dinesh.db.table.User
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.Database

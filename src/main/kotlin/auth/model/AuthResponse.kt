@@ -1,6 +1,6 @@
 package com.dinesh.auth.model
 
-import com.dinesh.models.UserDTO
+import com.dinesh.user.model.UserDTO
 import kotlinx.serialization.Serializable
 
 @Serializable

@@ -2,6 +2,7 @@ package com.dinesh
 
 import com.dinesh.db.DatabaseFactory
 import com.dinesh.auth.model.JWTConfig
+import com.dinesh.chat.services.ChatService
 import com.dinesh.chat.services.MongoMessageService
 import com.dinesh.plugins.configureJWTAuthentication
 import com.dinesh.plugins.configureRouting
@@ -35,11 +36,11 @@ fun Application.module() {
     )
 
     DatabaseFactory.init()
+    val chatService = ChatService()
+
     configureWebsockets()
     configureJWTAuthentication(config)
-    configureRouting(config, mongoMessageService)
     configureSerialization()
-
-
+    configureRouting(config, mongoMessageService, chatService)
 
 }
