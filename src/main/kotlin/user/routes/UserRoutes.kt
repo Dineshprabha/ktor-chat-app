@@ -2,6 +2,7 @@ package com.dinesh.user.routes
 
 import com.dinesh.db.table.User
 import com.dinesh.user.model.UserDTO
+import com.dinesh.utils.Constants
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
@@ -15,14 +16,14 @@ fun Route.userRoutes() {
 
     authenticate("jwt-auth") {
 
-        get("api/v1/profile") {
+        get(Constants.GET_PROFILE) {
             val principal = call.principal<JWTPrincipal>()
             val username = principal?.payload?.getClaim("username")?.asString()
             val expiresAt = principal?.expiresAt?.time?.minus(System.currentTimeMillis())
             call.respondText("Hello $username, token expires in $expiresAt ms")
         }
 
-        get("api/v1/users") {
+        get(Constants.GET_USERS) {
             val users = transaction {
                 User.selectAll().map {
                     UserDTO(
@@ -37,7 +38,7 @@ fun Route.userRoutes() {
             call.respond(users)
         }
 
-        get("api/v1/user/{id}") {
+        get(Constants.GET_USERS_BY_ID) {
             val userId = call.parameters["id"]?.let { UUID.fromString(it) }
                 ?: return@get call.respond(HttpStatusCode.BadRequest, "Invalid or missing user ID")
 

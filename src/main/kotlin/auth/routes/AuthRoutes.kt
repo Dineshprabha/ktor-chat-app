@@ -5,6 +5,7 @@ import com.dinesh.db.table.User
 import com.dinesh.plugins.generateRefreshToken
 import com.dinesh.plugins.generateToken
 import com.dinesh.user.model.UserDTO
+import com.dinesh.utils.Constants
 import com.dinesh.utils.PasswordHasher
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -16,7 +17,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 
 fun Route.authRoutes(config: JWTConfig) {
 
-    post("api/v1/auth/signup") {
+    post(Constants.POST_SIGN_UP) {
         val request = call.receive<AuthRequest>()
 
         val existingUser = transaction {
@@ -38,7 +39,7 @@ fun Route.authRoutes(config: JWTConfig) {
         }
     }
 
-    post("api/v1/auth/login") {
+    post(Constants.POST_LOGIN) {
         val request = call.receive<LoginRequest>()
         val user = transaction {
             User.selectAll().find { it[User.email] == request.email }
