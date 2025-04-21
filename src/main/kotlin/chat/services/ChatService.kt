@@ -6,7 +6,6 @@ import com.dinesh.db.table.UserChats
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.time.Instant
 import java.util.*
 
 class ChatService {
