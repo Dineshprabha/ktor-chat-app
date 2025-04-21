@@ -1,6 +1,5 @@
 package com.dinesh.chat.model
 
-import kotlinx.datetime.Instant
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import java.util.*
@@ -13,5 +12,5 @@ data class ChatUserDTO(
     val email: String,
     val imageUrl: String?,
     val lastMessage: String?,
-    @Contextual val lastMessageTime: Instant?
+    @Contextual val lastMessageTime: java.time.Instant?
 )

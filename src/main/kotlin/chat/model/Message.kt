@@ -1,5 +1,6 @@
 package com.dinesh.chat.model
 
+import kotlinx.serialization.Contextual
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.bson.types.ObjectId
@@ -15,8 +16,9 @@ data class Message(
     val thumbnailUrl: String? = null,
     val caption: String? = null,
     val fileName: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
+    @Contextual val timestamp: Long
 )
+
 
 @Serializable
 enum class MessageType {

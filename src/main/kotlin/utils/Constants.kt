@@ -17,5 +17,5 @@ object Constants {
     const val POST_CREATE_CHAT_USER =  "/api/v1/chats/create"
 
     //Websockets
-    const val WEBSOCKET_CHAT =  "/api/v1/chat"
+    const val WEBSOCKET_CHAT =  "/api/v1/chat/{chatId}"
 }

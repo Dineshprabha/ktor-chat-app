@@ -3,12 +3,10 @@ package com.dinesh.chat.services
 import com.dinesh.chat.model.ChatUserDTO
 import com.dinesh.db.table.User
 import com.dinesh.db.table.UserChats
-import com.dinesh.db.table.UserChats.innerJoin
-import kotlinx.datetime.toKotlinInstant
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.javatime.CurrentTimestamp
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.Instant
 import java.util.*
 
 class ChatService {
@@ -38,7 +36,7 @@ class ChatService {
                         email = row[User.email],
                         imageUrl = row[User.imageUrl],
                         lastMessage = row[UserChats.lastMessage],
-                        lastMessageTime = row[UserChats.lastMessageTime]?.toKotlinInstant()
+                        lastMessageTime = row[UserChats.lastMessageTime]
                     )
                 }
         }

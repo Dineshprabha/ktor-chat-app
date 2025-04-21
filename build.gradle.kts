@@ -44,6 +44,9 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-dao:0.60.0")
     implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
 
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.6.0")
 
     implementation(libs.ktor.server.websockets)
     implementation("at.favre.lib:bcrypt:0.9.0")
